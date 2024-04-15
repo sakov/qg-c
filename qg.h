@@ -16,6 +16,7 @@
 #if !defined(_QG_H)
 
 #define PROGRAM_NAME "qg"
+#define PACKAGE_NAME "QG-C"
 #define MAXSTRLEN 4096
 #define VERBOSE_DEF 1
 #define SCHEME_ORDER1 0

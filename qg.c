@@ -52,7 +52,7 @@ static void parse_commandline(int argc, char* argv[], char** fname)
             qgprm_describe();
             exit(0);
         } else if (strcmp(argv[i], "--version") == 0) {
-            printf("  %s version %s\n", PROGRAM_NAME, QG_VERSION);
+            printf("  %s version %s\n", PACKAGE_NAME, QG_VERSION);
             exit(0);
         } else if (strcmp(argv[i], "-") == 0) {
             usedefaults = 1;
