@@ -1,3 +1,6 @@
+v0.12
+    PS 20240416
+    -- Added command line option "-v" as an alias to "--version".
 v0.11
     PS 20240415
     -- Initial submission.

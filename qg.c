@@ -1,3 +1,18 @@
+/******************************************************************************
+ *
+ * File:        qg.c
+ *
+ * Created:     15/04/2024
+ *
+ * Authors:     Pavel Sakov
+ *              Bureau of Meteorology
+ *
+ * Description: main() for the QG model
+ *
+ * Revisions:
+ *
+ *****************************************************************************/
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -20,7 +35,7 @@ static void usage()
 {
     printf("  Usage: %s { - | <prm file> } [{-f | --force}]\n", PROGRAM_NAME);
     printf("         %s --describe-prm\n", PROGRAM_NAME);
-    printf("         %s --version\n", PROGRAM_NAME);
+    printf("         %s {-v | --version}\n", PROGRAM_NAME);
     printf("  Options:\n");
     printf("         -f, --force - clobber the output file\n");
     exit(0);
@@ -51,7 +66,7 @@ static void parse_commandline(int argc, char* argv[], char** fname)
         } else if (strcmp(argv[i], "--describe-prm") == 0) {
             qgprm_describe();
             exit(0);
-        } else if (strcmp(argv[i], "--version") == 0) {
+        } else if (strcmp(argv[i], "-v") == 0 || strcmp(argv[i], "--version") == 0) {
             printf("  %s version %s\n", PACKAGE_NAME, QG_VERSION);
             exit(0);
         } else if (strcmp(argv[i], "-") == 0) {
