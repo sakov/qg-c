@@ -78,11 +78,13 @@ int main(int argc, char* argv[])
     parse_commandline(argc, argv, &prmfname);
     if (verbose)
         printf("  parameter file = %s\n", (prmfname == NULL) ? "-" : prmfname);
+
     prm = qgprm_read(prmfname);
     if (verbose)
         qgprm_print(prm);
 
     m = model_create(prm);
+    qgprm_destroy(prm);
 
     if (m->infname == NULL || strcmp(m->infname, m->outfname) != 0)
         model_createoutput(m);
@@ -154,7 +156,6 @@ int main(int argc, char* argv[])
         printtime("  ");
     }
 
-    qgprm_destroy(prm);
     model_destroy(m);
 
     return 0;
