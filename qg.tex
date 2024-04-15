@@ -1,0 +1,23 @@
+\documentclass[intlimits,fleqn, 12pt]{article}
+\usepackage{amsmath}
+\begin{document}
+\thispagestyle{empty}
+\section*{QG equation for potential vorticity}
+\begin{align*}
+  &q_t = - \psi_x - r J(\psi, q) - r_\mathrm{kb} \Delta \psi + r_\mathrm{kh} \Delta^2 \psi - r_\mathrm{kh2} \Delta^3 \psi + \tau,\\
+  &q = \Delta \psi - F \psi,\\
+  &J(\psi, q) = \psi_x q_y - \psi_y q_x,
+\end{align*}
+where
+\begin{align*}
+  &q & &\text{is the potential vorticity}, \hspace{7cm}\\
+  &F & &\text{-- Froude number},\\
+  &r & &\text{-- a multiple for the nonlinear advection term,}\\
+  &&& \text{\ \ "sort of Rossby number"},\\
+  &r_\mathrm{kb} & &\text{-- bottom friction},\\
+  &r_\mathrm{kh} & &\text{-- horizontal friction},\\
+  &r_\mathrm{kh2} & &\text{-- biharmonic horizontal friction},\\
+  &\tau & & \text{-- curl of the surface stress}.
+\end{align*}
+The forcing is set as $\tau = A \sin(2\pi k \frac{x}{L_\mathrm{x}})$, where $A,k$ -- coefficients, and $L_\mathrm{x}$ -- domain size in X direction.
+\end{document}

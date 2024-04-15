@@ -1,0 +1,48 @@
+QG-C
+
+1.5-layer QG model.
+
+This is a re-write of the Fortran code downloaded from
+http://www.seas.harvard.edu/climate/eli/Downloads/QG200205011455.tar.gz.
+The original Fortran code with some modifications was used in enkf-matlab
+package and as a part of enkf-matlab in the following paper:
+
+Sakov, P., Oke, P.R., 2008. A deterministic formulation of the ensemble Kalman
+filter: an alternative to ensemble square root filters. Tellus 60A, 361-371.
+https://doi.org/10.1111/j.1600-0870.2007.00299.x
+
+Apart from being ported to C (except helmholtz.f90), this code adds a number of
+convenience features and corrects inconsistencies in handling the geometry. 
+
+EQUATION
+
+The governing equation is presented in qg.pdf.
+
+RUNNING
+
+To run the model with default parameters, enter:
+
+> ./qg -
+
+To change parameters, run it as
+
+> ./qg <parameter file>
+
+The parameter file description is given by
+
+> ./qg --describe-prm
+
+Note: the default settings have negative harmonic friction, which is not quite
+physical. For a more conventional variant you may try setting RKB = 0; RKH = 0.
+
+COMPILING
+
+Dependencies: NetCDF
+
+The code has been developed under GNU/Linux platform. The Makefile assumes
+availability of gcc and gfortran. It should be straightforward to compile this
+code elsewhere.
+
+To compile run:
+
+> make
