@@ -289,7 +289,7 @@ void qgprm_describe(void)
     printf("  # other parameters:\n");
     printf("    verbose = {0%s | 1%s | 2%s}\n", (VERBOSE_DEF == 0) ? "*" : "", (VERBOSE_DEF == 1) ? "*" : "", (VERBOSE_DEF == 2) ? "*" : "");
     printf("\n");
-    printf("  Comments:\n");
+    printf("  Notes:\n");
     printf("    1. \"*\" denotes default value\n");
     printf("    2. {...} lists posible choices\n");
     printf("    3. <...> describes the entry\n");
