@@ -162,6 +162,11 @@ qgprm* qgprm_read(char* fname)
                 quit("%s, l.%d: R not specified", fname, line);
             if (!str2double(token, &prm->r))
                 quit("%s, l.%d: could not convert \"%s\" to double", fname, line, token);
+        } else if (strcasecmp(token, "A") == 0) {
+            if ((token = strtok(NULL, seps)) == NULL)
+                quit("%s, l.%d: A not specified", fname, line);
+            if (!str2double(token, &prm->a))
+                quit("%s, l.%d: could not convert \"%s\" to double", fname, line, token);
         } else if (strcasecmp(token, "VERBOSE") == 0) {
             if ((token = strtok(NULL, seps)) == NULL)
                 quit("%s, l.%d: VERBOSE not specified", fname, line);

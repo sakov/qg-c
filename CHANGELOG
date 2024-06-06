@@ -1,3 +1,6 @@
+v0.13
+    PS 07062024
+    -- In qgprm_read() added reading (missing) A.
 v0.12
     PS 20240416
     -- Added command line option "-v" as an alias to "--version".
