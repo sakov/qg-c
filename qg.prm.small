@@ -1,0 +1,12 @@
+MREFIN = 6
+NX1 = 1
+NY1 = 1
+outfname = qg.nc
+rkb      = 0
+rkh      = 0
+rkh2     = 1.0e-13
+lx = 0.2
+A = 2.0
+r = 1.0e-4
+f = 6400
+dt = 4.0
