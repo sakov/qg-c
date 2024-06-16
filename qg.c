@@ -87,8 +87,8 @@ int main(int argc, char* argv[])
 {
     char* prmfname = NULL;
     qgprm* prm = NULL;
-    model* m;
-    int nstep, step, nr;
+    model* qg;
+    int nstep, step, nr, dnout, dnoutave;
 
     parse_commandline(argc, argv, &prmfname);
     if (verbose)
@@ -98,72 +98,102 @@ int main(int argc, char* argv[])
     if (verbose)
         qgprm_print(prm);
 
-    m = model_create(prm);
-    qgprm_destroy(prm);
+    qg = model_create(prm);
 
-    if (m->infname == NULL || strcmp(m->infname, m->outfname) != 0)
-        model_createoutput(m);
+    if (prm->infname == NULL || strcmp(prm->infname, prm->outfname) != 0)
+        model_createoutput(qg);
 
-    if (m->infname == NULL) {
-        m->t = 0;
+    if (prm->infname == NULL) {
+        qg->t = 0;
         if (verbose)
             printf("  starting model from zero state\n");
     } else {
-        if (strcmp(m->infname, m->outfname) == 0 && m->rstart != -1)
-            quit("%s: can't specify \"rstart\" when starting from and writing to the same file", m->infname);
-        model_readinput(m);
+        if (strcmp(prm->infname, prm->outfname) == 0 && prm->rstart != -1)
+            quit("%s: can't specify \"rstart\" when starting from and writing to the same file", prm->infname);
+        model_readinput(qg);
         if (verbose)
             printf("  starting the model\n");
     }
 
-    if (m->tend < m->t) {
-        m->tend = m->t + m->tend;
+    if (prm->tend < qg->t) {
+        prm->tend = qg->t + prm->tend;
         if (verbose)
-            printf("    readjusted the end time: tend = %f\n", m->tend);
+            printf("    readjusted the end time: tend = %f\n", prm->tend);
     }
 
-    laplacian(m->lx / (double) (m->n - 1), m->m, m->n, m->psi, m->q);
+    laplacian(prm->lx / (double) (prm->n - 1), prm->m, prm->n, qg->psi, qg->q);
     {
-        double* psi0 = m->psi[0];
-        double* q0 = m->q[0];
-        double* psiguess0 = m->psiguess[0];
+        double* psi0 = qg->psi[0];
+        double* q0 = qg->q[0];
+        double* psiguess0 = qg->psiguess[0];
         int i;
 
-        for (i = 0; i < m->mn; ++i)
-            q0[i] = q0[i] - m->f * psi0[i];
-        for (i = 0; i < m->mn; ++i)
+        for (i = 0; i < qg->mn; ++i)
+            q0[i] = q0[i] - prm->f * psi0[i];
+        for (i = 0; i < qg->mn; ++i)
             psiguess0[i] = psi0[i];
     }
 
-    nstep = (m->tend - m->t) / m->dt;
+    nstep = (prm->tend - qg->t) / prm->dt;
+    dnout = (int) (prm->dtout / prm->dt);
+    dnoutave = (isfinite(prm->dtoutave)) ? (int) (prm->dtoutave / prm->dt) : 0;
+
     if (verbose) {
         printf("    nstep = %d\n", nstep);
-        printf("    nrecord = %d\n", (int) ((m->tend - m->t) / m->dtout + EPS));
+        printf("    nrecord = %d\n", (int) ((prm->tend - qg->t) / prm->dtout + EPS));
     }
     if (verbose) {
         printtime("  ");
         printf("  main cycle:");
     }
     for (step = 0, nr = 0; step < nstep; ++step) {
-        double* q0 = m->q[0];
+        double* q0 = qg->q[0];
+        double weight;
         int i;
 
-        for (i = 0; i < m->mn; ++i)
+        for (i = 0; i < qg->mn; ++i)
             if (fabs(q0[i]) > QMAX)
-                quit("|qmax| > %.3g at t = %.6f, step = %d\n", QMAX, m->t, step);
-        if (m->scheme == SCHEME_ORDER1)
-            qg_step_order1(m);
-        else if (m->scheme == SCHEME_ORDER2)
-            qg_step_order2(m);
-        else if (m->scheme == SCHEME_RK4)
-            qg_step_rk4(m);
-        else if (m->scheme == SCHEME_DP5)
-            qg_step_dp5(m);
+                quit("|qmax| > %.3g at t = %.6f, step = %d\n", QMAX, qg->t, step);
+        if (prm->scheme == SCHEME_ORDER1)
+            qg_step_order1(qg);
+        else if (prm->scheme == SCHEME_ORDER2)
+            qg_step_order2(qg);
+        else if (prm->scheme == SCHEME_RK4)
+            qg_step_rk4(qg);
+        else if (prm->scheme == SCHEME_DP5)
+            qg_step_dp5(qg);
 
-        if (floor(m->t / m->dtout + EPS) != floor((m->t - m->dt) / m->dtout + EPS)) {
-            calc_psi(m, m->psiguess, m->q, m->psi);
-            model_writedump(m);
+        if (step > 0 && step % dnout == 0) {
+            calc_psi(qg, qg->psiguess, qg->q, qg->psi);
+            model_writedump(qg, 0);
             nr++;
+        }
+
+        if (!isfinite(prm->dtoutave))
+            continue;
+
+        weight = (step % dnoutave == 0) ? 0.5 : 1.0;
+        for (i = 0; i < qg->mn; ++i)
+            qg->psiave[i] += qg->psi[0][i] * weight;
+        if (prm->save_q)
+            for (i = 0; i < qg->mn; ++i)
+                qg->qave[i] += qg->q[0][i] * weight;
+        qg->tave += qg->t * weight;
+
+        if (step > 0 && step % dnoutave == 0) {
+            for (i = 0; i < qg->mn; ++i)
+                qg->psiave[i] /= (double) dnoutave;
+            if (prm->save_q)
+                for (i = 0; i < qg->mn; ++i)
+                    qg->qave[i] /= (double) dnoutave;
+            qg->tave /= (double) dnoutave;
+            model_writedump(qg, 1);
+            for (i = 0; i < qg->mn; ++i)
+                qg->psiave[i] = qg->psi[0][i] * 0.5;
+            if (prm->save_q)
+                for (i = 0; i < qg->mn; ++i)
+                    qg->qave[i] = qg->q[0][i] * 0.5;
+            qg->tave = qg->t * 0.5;
         }
     }
     if (verbose && nr > 0) {
@@ -171,7 +201,7 @@ int main(int argc, char* argv[])
         printtime("  ");
     }
 
-    model_destroy(m);
+    model_destroy(qg);
 
     return 0;
 }

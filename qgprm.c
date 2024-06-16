@@ -56,6 +56,7 @@ static qgprm* qgprm_create(void)
     prm->dt = DT_DEF;
     prm->tend = TEND_DEF;
     prm->dtout = DTOUT_DEF;
+    prm->dtoutave = NAN;
     prm->rkb = RKB_DEF;
     prm->rkh = RKH_DEF;
     prm->rkh2 = RKH2_DEF;
@@ -67,6 +68,7 @@ static qgprm* qgprm_create(void)
     prm->rstart = -1;
     prm->infname = NULL;
     prm->outfname = strdup(OUTFNAME_DEF);
+    prm->outfnameave = strdup(OUTFNAMEAVE_DEF);
     prm->save_q = SAVE_Q_DEF;
 
     return prm;
@@ -132,6 +134,11 @@ qgprm* qgprm_read(char* fname)
                 quit("%s, l.%d: DTOUT not specified", fname, line);
             if (!str2double(token, &prm->dtout))
                 quit("%s, l.%d: could not convert \"%s\" entry to double", fname, line, token);
+        } else if (strcasecmp(token, "DTOUTAVE") == 0) {
+            if ((token = strtok(NULL, seps)) == NULL)
+                quit("%s, l.%d: DTOUTAVE not specified", fname, line);
+            if (!str2double(token, &prm->dtoutave))
+                quit("%s, l.%d: could not convert \"%s\" entry to double", fname, line, token);
         } else if (strcasecmp(token, "DT") == 0) {
             if ((token = strtok(NULL, seps)) == NULL)
                 quit("%s, l.%d: DT not specified", fname, line);
@@ -195,6 +202,12 @@ qgprm* qgprm_read(char* fname)
             if (prm->outfname != NULL)
                 free(prm->outfname);
             prm->outfname = strdup(token);
+        } else if (strcasecmp(token, "OUTFNAMEAVE") == 0) {
+            if ((token = strtok(NULL, seps)) == NULL)
+                quit("%s, l.%d: OUTFNAMEAVE not specified", fname, line);
+            if (prm->outfnameave != NULL)
+                free(prm->outfnameave);
+            prm->outfnameave = strdup(token);
         } else if (strcasecmp(token, "RSTART") == 0) {
             if ((token = strtok(NULL, seps)) == NULL)
                 quit("%s, l.%d: RSTART not specified", fname, line);
@@ -213,6 +226,12 @@ qgprm* qgprm_read(char* fname)
     prm->n = prm->nx1 * ipow(2, prm->mrefin - 1) + 1;
     prm->m = prm->ny1 * ipow(2, prm->mrefin - 1) + 1;
 
+    if (prm->dtout / prm->dt - floor(prm->dtout / prm->dt) != 0.0)
+        quit("dtout has to be integer multiple of dt (dtout / dt = %f)", prm->dtout / prm->dt);
+    if (isfinite(prm->dtoutave)
+        && prm->dtoutave / prm->dt - floor(prm->dtoutave / prm->dt) != 0.0)
+        quit("dtoutave has to be integer multiple of dt (dtoutave / dt = %f)", prm->dtoutave / prm->dt);
+
     return prm;
 }
 
@@ -223,6 +242,7 @@ void qgprm_destroy(qgprm* prm)
     free(prm->prmfname);
     free(prm->infname);
     free(prm->outfname);
+    free(prm->outfnameave);
     free(prm);
 }
 
@@ -236,11 +256,15 @@ void qgprm_print(qgprm* prm)
     if (prm->rstart >= 0)
         printf("    rstart   = %d\n", prm->rstart);
     printf("    outfile  = %s\n", prm->outfname);
+    if (isfinite(prm->dtoutave))
+        printf("    outfileave  = %s\n", prm->outfnameave);
     printf("    save_q   = %s\n", (prm->save_q) ? "yes" : "no");
     printf("    scheme   = %s\n", SCHEME_STR[prm->scheme]);
     printf("    dt       = %.2f\n", prm->dt);
     printf("    tend     = %.0f\n", prm->tend);
     printf("    dtout    = %.1f\n", prm->dtout);
+    if (isfinite(prm->dtoutave))
+        printf("    dtoutave = %.1f\n", prm->dtoutave);
     if (verbose > 1) {
         printf("    MREFIN   = %d\n", prm->mrefin);
         printf("    NX1      = %d\n", prm->nx1);
@@ -267,38 +291,43 @@ void qgprm_describe(void)
 {
     printf("  QG parameter file format:\n");
     printf("  # run parameters:\n");
-    printf("    scheme   = {order1%s | order2%s | rk4%s | dp5%s}\n", (SCHEME_DEF == SCHEME_ORDER1) ? "*" : "", (SCHEME_DEF == SCHEME_ORDER2) ? "*" : "", (SCHEME_DEF == SCHEME_RK4) ? "*" : "", (SCHEME_DEF == SCHEME_DP5) ? "*" : "");
-    printf("    dt       = <time step>                   (%.2f*)\n", DT_DEF);
-    printf("    tend     = <end time>                    (%.0f*)\n", TEND_DEF);
-    printf("    dtout    = <output interval>             (%.1f*)\n", DTOUT_DEF);
-    printf("    infname  = <input file name>             (<none>*)\n");
-    printf("    rstart   = <start dump>                  (<last dump>*)\n");
-    printf("    outfname = <output file name>            (%s*)\n", OUTFNAME_DEF);
-    printf("    save_q   = {");
-    if (SAVE_Q_DEF)
-        printf("yes* | no}\n");
-    else
-        printf("yes | no*}\n");
+    printf("    scheme   = {order1 | order2 | rk4 | dp5}");
+    if (SCHEME_DEF == SCHEME_ORDER1)
+        printf(" (order1)\n");
+    else if (SCHEME_DEF == SCHEME_ORDER2)
+        printf(" (order2)\n");
+    else if (SCHEME_DEF == SCHEME_RK4)
+        printf(" (rk4)\n");
+    else if (SCHEME_DEF == SCHEME_DP5)
+        printf(" (dp5)\n");
+    printf("    dt       = <time step>                    (%.2f)\n", DT_DEF);
+    printf("    tend     = <end time>                     (%.0f)\n", TEND_DEF);
+    printf("    dtout    = <output time interval>         (%.1f)\n", DTOUT_DEF);
+    printf("    dtoutave = <output time interval for av.> (NaN)\n");
+    printf("    infname  = <input file name>              (<none>)\n");
+    printf("    rstart   = <start dump>                   (<last dump>)\n");
+    printf("    outfname = <output file name>             (%s)\n", OUTFNAME_DEF);
+    printf("    outfnameave = <output file name for av.>  (%s)\n", OUTFNAMEAVE_DEF);
+    printf("    save_q   = {yes | no}                     (%s)\n", (SAVE_Q_DEF) ? "yes" : "no");
     printf("  # model parameters:\n");
-    printf("    MREFIN   = <small number>                (%d*)\n", MREFIN_DEF);
-    printf("    NX1      = <small number>                (%d*)\n", NX1_DEF);
-    printf("    NY1      = <small number>                (%d*)\n", NY1_DEF);
-    printf("    LX       = <domain size in X direction>  (%.2f*)\n", LX_DEF);
-    printf("    rkb      = <value>                       (%.1e*)\n", RKB_DEF);
-    printf("    rkh      = <value>                       (%.1e*)\n", RKH_DEF);
-    printf("    rkh2     = <value>                       (%.1e*)\n", RKH2_DEF);
-    printf("    F        = <value>                       (%.1f*)\n", F_DEF);
-    printf("    r        = <value>                       (%.1e*)\n", R_DEF);
-    printf("    A        = <value>                       (%.2f*)\n", A_DEF);
-    printf("    k        = <value>                       (%.1f*)\n", K_DEF);
+    printf("    MREFIN   = <small number>                 (%d)\n", MREFIN_DEF);
+    printf("    NX1      = <small number>                 (%d)\n", NX1_DEF);
+    printf("    NY1      = <small number>                 (%d)\n", NY1_DEF);
+    printf("    LX       = <domain size in X direction>   (%.2f)\n", LX_DEF);
+    printf("    rkb      = <value>                        (%.1e)\n", RKB_DEF);
+    printf("    rkh      = <value>                        (%.1e)\n", RKH_DEF);
+    printf("    rkh2     = <value>                        (%.1e)\n", RKH2_DEF);
+    printf("    F        = <value>                        (%.1f)\n", F_DEF);
+    printf("    r        = <value>                        (%.1e)\n", R_DEF);
+    printf("    A        = <value>                        (%.2f)\n", A_DEF);
+    printf("    k        = <value>                        (%.1f)\n", K_DEF);
     printf("  # other parameters:\n");
-    printf("    verbose = {0%s | 1%s | 2%s}\n", (VERBOSE_DEF == 0) ? "*" : "", (VERBOSE_DEF == 1) ? "*" : "", (VERBOSE_DEF == 2) ? "*" : "");
+    printf("    verbose = {0 | 1 | 2}                     (%d)\n", VERBOSE_DEF);
     printf("\n");
     printf("  Notes:\n");
-    printf("    1. \"*\" denotes default value\n");
+    printf("    1. (...) denotes a default value\n");
     printf("    2. {...} lists posible choices\n");
     printf("    3. <...> describes the entry\n");
-    printf("    4. (...) is a comment\n");
     printf("\n");
     printf("    The model grid has dimensions:\n");
     printf("      (ny, nx) = (NY1 * 2^(MREFIN - 1) + 1, NX1 * 2^(MREFIN - 1) + 1)\n");

@@ -10,3 +10,6 @@ A = 2.0
 r = 1.0e-4
 f = 6400
 dt = 4.0
+dtout = 100.0
+dtoutave = 20;
+save_q = 1;

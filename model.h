@@ -16,27 +16,8 @@
 #if !defined(_MODEL_H)
 
 typedef struct {
-    char* prmfname;
-    int mrefin;
-    int nx1, ny1;
-
-    int m, n, mn;
-    double lx;
-    double dt;
-    double tend;
-    double dtout;
-    double rkb;
-    double rkh;
-    double rkh2;
-    double f;
-    double r;
-    double a;
-    double k;
-    int scheme;
-    int rstart;
-    char* infname;
-    char* outfname;
-    int save_q;
+    qgprm* prm;
+    int mn;
 
     double t;
     double** psi;
@@ -54,6 +35,9 @@ typedef struct {
     double** q2;
     double** q3;
     double** q4;
+    double tave;
+    double* psiave;
+    double* qave;
 
     double* curlt;
 } model;
@@ -62,7 +46,7 @@ model* model_create(qgprm* prm);
 void model_destroy(model* m);
 void model_readinput(model* m);
 void model_createoutput(model* m);
-void model_writedump(model* m);
+void model_writedump(model* m, int ave);
 
 #define _MODEL_H
 #endif

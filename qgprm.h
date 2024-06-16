@@ -33,6 +33,7 @@
 #define TEND_DEF 50000.0
 #define DTOUT_DEF 20.0
 #define OUTFNAME_DEF "qg.nc"
+#define OUTFNAMEAVE_DEF "qgave.nc"
 
 typedef struct {
     char* prmfname;
@@ -42,6 +43,7 @@ typedef struct {
     double dt;
     double tend;
     double dtout;
+    double dtoutave;
     double rkb;
     double rkh;
     double rkh2;
@@ -53,6 +55,7 @@ typedef struct {
     int rstart;
     char* infname;
     char* outfname;
+    char* outfnameave;
     int save_q;
 
     int m, n;

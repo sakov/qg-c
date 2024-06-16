@@ -29,160 +29,166 @@
 
 /**
  */
-void calc_psi(model* m, double** psiin, double** q, double** psiout)
+void calc_psi(model* qg, double** psiin, double** q, double** psiout)
 {
+    qgprm* prm = qg->prm;
     int one = 1;
     int two = 2;
     int three = 3;
-    double h1 = m->lx / (double) m->nx1;
+    double h1 = prm->lx / (double) prm->nx1;
 
-    __helmholtz_mod_MOD_helmholtz(psiin[0], q[0], &m->f, &m->nx1, &m->ny1, &m->mrefin, &h1, &one, &two, &three, &m->n, &m->m, psiout[0]);
+    __helmholtz_mod_MOD_helmholtz(psiin[0], q[0], &prm->f, &prm->nx1, &prm->ny1, &prm->mrefin, &h1, &one, &two, &three, &prm->n, &prm->m, psiout[0]);
 }
 
 /**
  */
-static void qgflux(model* m, double** q, double** psiin, double** psiout, double** qflux)
+static void qgflux(model* qg, double** q, double** psiin, double** psiout, double** qflux)
 {
-    double h = m->lx / (double) (m->n - 1);
+    qgprm* prm = qg->prm;
+    double h = prm->lx / (double) (prm->n - 1);
     int i, j;
 
-    calc_psi(m, psiin, q, psiout);
-    arakawa(h, m->m, m->n, psiout, q, m->J);
-    laplacian(h, m->m, m->n, psiout, m->zeta);
-    laplacian(h, m->m, m->n, m->zeta, m->zeta2);
-    laplacian(h, m->m, m->n, m->zeta2, m->zeta4);
+    calc_psi(qg, psiin, q, psiout);
+    arakawa(h, prm->m, prm->n, psiout, q, qg->J);
+    laplacian(h, prm->m, prm->n, psiout, qg->zeta);
+    laplacian(h, prm->m, prm->n, qg->zeta, qg->zeta2);
+    laplacian(h, prm->m, prm->n, qg->zeta2, qg->zeta4);
 
     /*
      * (assume that qgflux was initialised to zero and therefore stays zero at
      *  the boundaries)
      */
-    for (j = 1; j < m->m - 1; ++j) {
+    for (j = 1; j < prm->m - 1; ++j) {
         double* qfluxj = qflux[j];
-        double* Jj = m->J[j];
-        double* zetaj = m->zeta[j];
-        double* zeta2j = m->zeta2[j];
-        double* zeta4j = m->zeta4[j];
+        double* Jj = qg->J[j];
+        double* zetaj = qg->zeta[j];
+        double* zeta2j = qg->zeta2[j];
+        double* zeta4j = qg->zeta4[j];
         double* psijp1 = psiout[j + 1];
         double* psijm1 = psiout[j - 1];
 
-        for (i = 1; i < m->n - 1; ++i)
-            qfluxj[i] = -m->r * Jj[i] - m->rkb * zetaj[i] + m->rkh * zeta2j[i] - m->rkh2 * zeta4j[i] + m->curlt[i] - 0.5 / h * (psijp1[i] - psijm1[i]);
+        for (i = 1; i < prm->n - 1; ++i)
+            qfluxj[i] = -prm->r * Jj[i] - prm->rkb * zetaj[i] + prm->rkh * zeta2j[i] - prm->rkh2 * zeta4j[i] + qg->curlt[i] - 0.5 / h * (psijp1[i] - psijm1[i]);
     }
 }
 
 /**
  */
-void qg_step_order1(model* m)
+void qg_step_order1(model* qg)
 {
-    double* q0 = m->q[0];
-    double* qflux0 = m->qflux1[0];
+    double* q0 = qg->q[0];
+    double* qflux0 = qg->qflux1[0];
+    double dt = qg->prm->dt;
     int i;
 
-    qgflux(m, m->q, m->psi, m->psiguess, m->qflux1);
-    memcpy(m->psi[0], m->psiguess[0], m->m * m->n * sizeof(double));
-    for (i = 0; i < m->mn; ++i)
-        q0[i] += m->dt * qflux0[i];
+    qgflux(qg, qg->q, qg->psi, qg->psiguess, qg->qflux1);
+    memcpy(qg->psi[0], qg->psiguess[0], qg->mn * sizeof(double));
+    for (i = 0; i < qg->mn; ++i)
+        q0[i] += dt * qflux0[i];
 
-    m->t += m->dt;
+    qg->t += dt;
 }
 
 /**
  */
-void qg_step_order2(model* m)
+void qg_step_order2(model* qg)
 {
-    double* q0 = m->q[0];
-    double* q20 = m->q2[0];
-    double* q30 = m->q3[0];
-    double* qflux0 = m->qflux1[0];
-    double dt2 = 0.5 * m->dt;
+    double* q0 = qg->q[0];
+    double* q20 = qg->q2[0];
+    double* q30 = qg->q3[0];
+    double* qflux0 = qg->qflux1[0];
+    double dt = qg->prm->dt;
+    double dt2 = 0.5 * dt;
     int i;
 
-    qgflux(m, m->q, m->psiguess, m->psi, m->qflux1);
-    for (i = 0; i < m->mn; ++i)
+    qgflux(qg, qg->q, qg->psiguess, qg->psi, qg->qflux1);
+    for (i = 0; i < qg->mn; ++i)
         q20[i] = q0[i] + dt2 * qflux0[i];
-    for (i = 0; i < m->mn; ++i)
-        q30[i] = q0[i] + m->dt * qflux0[i];
+    for (i = 0; i < qg->mn; ++i)
+        q30[i] = q0[i] + dt * qflux0[i];
 
-    qgflux(m, m->q2, m->psi, m->psiguess, m->qflux1);
-    for (i = 0; i < m->mn; ++i)
+    qgflux(qg, qg->q2, qg->psi, qg->psiguess, qg->qflux1);
+    for (i = 0; i < qg->mn; ++i)
         q20[i] += dt2 * qflux0[i];
-    for (i = 0; i < m->mn; ++i)
+    for (i = 0; i < qg->mn; ++i)
         q0[i] = 2.0 * q20[i] - q30[i];
 
-    m->t += m->dt;
+    qg->t += dt;
 }
 
 /**
  */
-void qg_step_rk4(model* m)
+void qg_step_rk4(model* qg)
 {
-    double* q0 = m->q[0];
-    double* q20 = m->q2[0];
-    double* q30 = m->q3[0];
-    double* q40 = m->q4[0];
-    double* qflux10 = m->qflux1[0];
-    double* qflux20 = m->qflux2[0];
-    double* qflux30 = m->qflux3[0];
-    double* qflux40 = m->qflux4[0];
-    double dt2 = 0.5 * m->dt;
-    double dt6 = m->dt / 6.0;
+    double* q0 = qg->q[0];
+    double* q20 = qg->q2[0];
+    double* q30 = qg->q3[0];
+    double* q40 = qg->q4[0];
+    double* qflux10 = qg->qflux1[0];
+    double* qflux20 = qg->qflux2[0];
+    double* qflux30 = qg->qflux3[0];
+    double* qflux40 = qg->qflux4[0];
+    double dt = qg->prm->dt;
+    double dt2 = 0.5 * dt;
+    double dt6 = dt / 6.0;
     int i;
 
-    qgflux(m, m->q, m->psiguess, m->psi, m->qflux1);
-    for (i = 0; i < m->mn; ++i)
+    qgflux(qg, qg->q, qg->psiguess, qg->psi, qg->qflux1);
+    for (i = 0; i < qg->mn; ++i)
         q20[i] = q0[i] + dt2 * qflux10[i];
 
-    qgflux(m, m->q2, m->psi, m->psiguess, m->qflux2);
-    for (i = 0; i < m->mn; ++i)
+    qgflux(qg, qg->q2, qg->psi, qg->psiguess, qg->qflux2);
+    for (i = 0; i < qg->mn; ++i)
         q30[i] = q0[i] + dt2 * qflux20[i];
 
-    qgflux(m, m->q3, m->psiguess, m->psi, m->qflux3);
-    for (i = 0; i < m->mn; ++i)
-        q40[i] = q0[i] + m->dt * qflux30[i];
+    qgflux(qg, qg->q3, qg->psiguess, qg->psi, qg->qflux3);
+    for (i = 0; i < qg->mn; ++i)
+        q40[i] = q0[i] + dt * qflux30[i];
 
-    qgflux(m, m->q4, m->psi, m->psiguess, m->qflux4);
-    for (i = 0; i < m->mn; ++i)
+    qgflux(qg, qg->q4, qg->psi, qg->psiguess, qg->qflux4);
+    for (i = 0; i < qg->mn; ++i)
         q0[i] += (qflux10[i] + 2.0 * (qflux20[i] + qflux30[i]) + qflux40[i]) * dt6;
 
-    m->t += m->dt;
+    qg->t += dt;
 }
 
 /**
  */
-void qg_step_dp5(model* m)
+void qg_step_dp5(model* qg)
 {
-    double* q0 = m->q[0];
-    double* q20 = m->q2[0];
-    double* qflux10 = m->qflux1[0];
-    double* qflux20 = m->qflux2[0];
-    double* qflux30 = m->qflux3[0];
-    double* qflux40 = m->qflux4[0];
-    double* qflux50 = m->qflux5[0];
+    double* q0 = qg->q[0];
+    double* q20 = qg->q2[0];
+    double* qflux10 = qg->qflux1[0];
+    double* qflux20 = qg->qflux2[0];
+    double* qflux30 = qg->qflux3[0];
+    double* qflux40 = qg->qflux4[0];
+    double* qflux50 = qg->qflux5[0];
+    double dt = qg->prm->dt;
     int i;
 
-    qgflux(m, m->q, m->psiguess, m->psi, m->qflux1);
-    for (i = 0; i < m->mn; ++i)
-        q20[i] = q0[i] + m->dt * 0.2 * qflux10[i];
+    qgflux(qg, qg->q, qg->psiguess, qg->psi, qg->qflux1);
+    for (i = 0; i < qg->mn; ++i)
+        q20[i] = q0[i] + dt * 0.2 * qflux10[i];
 
-    qgflux(m, m->q2, m->psi, m->psiguess, m->qflux2);
-    for (i = 0; i < m->mn; ++i)
-        q20[i] = q0[i] + m->dt * ((3.0 / 40.0) * qflux10[i] + (9.0 / 40.0) * qflux20[i]);
+    qgflux(qg, qg->q2, qg->psi, qg->psiguess, qg->qflux2);
+    for (i = 0; i < qg->mn; ++i)
+        q20[i] = q0[i] + dt * ((3.0 / 40.0) * qflux10[i] + (9.0 / 40.0) * qflux20[i]);
 
-    qgflux(m, m->q2, m->psiguess, m->psi, m->qflux3);
-    for (i = 0; i < m->mn; ++i)
-        q20[i] = q0[i] + m->dt * ((44.0 / 45.0) * qflux10[i] - (56.0 / 15.0) * qflux20[i] + (32.0 / 9.0) * qflux30[i]);
+    qgflux(qg, qg->q2, qg->psiguess, qg->psi, qg->qflux3);
+    for (i = 0; i < qg->mn; ++i)
+        q20[i] = q0[i] + dt * ((44.0 / 45.0) * qflux10[i] - (56.0 / 15.0) * qflux20[i] + (32.0 / 9.0) * qflux30[i]);
 
-    qgflux(m, m->q2, m->psi, m->psiguess, m->qflux4);
-    for (i = 0; i < m->mn; ++i)
-        q20[i] = q0[i] + m->dt * ((19372.0 / 6561.0) * qflux10[i] - (25360.0 / 2187.0) * qflux20[i] + (64448.0 / 6561.0) * qflux30[i] - (212.0 / 729.0) * qflux40[i]);
+    qgflux(qg, qg->q2, qg->psi, qg->psiguess, qg->qflux4);
+    for (i = 0; i < qg->mn; ++i)
+        q20[i] = q0[i] + dt * ((19372.0 / 6561.0) * qflux10[i] - (25360.0 / 2187.0) * qflux20[i] + (64448.0 / 6561.0) * qflux30[i] - (212.0 / 729.0) * qflux40[i]);
 
-    qgflux(m, m->q2, m->psiguess, m->psi, m->qflux5);
-    for (i = 0; i < m->mn; ++i)
-        q20[i] = q0[i] + m->dt * ((9017.0 / 3168.0) * qflux10[i] - (355.0 / 33.0) * qflux20[i] + (46732.0 / 5247.0) * qflux30[i] + (49.0 / 176.0) * qflux40[i] - (5103.0 / 18656.0) * qflux50[i]);
+    qgflux(qg, qg->q2, qg->psiguess, qg->psi, qg->qflux5);
+    for (i = 0; i < qg->mn; ++i)
+        q20[i] = q0[i] + dt * ((9017.0 / 3168.0) * qflux10[i] - (355.0 / 33.0) * qflux20[i] + (46732.0 / 5247.0) * qflux30[i] + (49.0 / 176.0) * qflux40[i] - (5103.0 / 18656.0) * qflux50[i]);
 
-    qgflux(m, m->q2, m->psi, m->psiguess, m->qflux2);
-    for (i = 0; i < m->mn; ++i)
-        q0[i] += m->dt * ((35.0 / 384.0) * qflux10[i] + (500.0 / 1113.0) * qflux30[i] + (125.0 / 192.0) * qflux40[i] - (2187.0 / 6784.0) * qflux50[i] + (11.0 / 84.0) * qflux20[i]);
+    qgflux(qg, qg->q2, qg->psi, qg->psiguess, qg->qflux2);
+    for (i = 0; i < qg->mn; ++i)
+        q0[i] += dt * ((35.0 / 384.0) * qflux10[i] + (500.0 / 1113.0) * qflux30[i] + (125.0 / 192.0) * qflux40[i] - (2187.0 / 6784.0) * qflux50[i] + (11.0 / 84.0) * qflux20[i]);
 
-    m->t += m->dt;
+    qg->t += dt;
 }
