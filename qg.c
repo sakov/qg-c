@@ -17,6 +17,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
+#include <stdint.h>
 #include "qg.h"
 #include "utils.h"
 #include "qgprm.h"
@@ -88,7 +89,7 @@ int main(int argc, char* argv[])
     char* prmfname = NULL;
     qgprm* prm = NULL;
     model* qg;
-    int nstep, step, nr, dnout, dnoutave;
+    int nstep, step, nr, dnout, dnoutave, dnobs;
 
     parse_commandline(argc, argv, &prmfname);
     if (verbose)
@@ -136,7 +137,8 @@ int main(int argc, char* argv[])
 
     nstep = (prm->tend - qg->t) / prm->dt;
     dnout = (int) (prm->dtout / prm->dt);
-    dnoutave = (isfinite(prm->dtoutave)) ? (int) (prm->dtoutave / prm->dt) : 0;
+    dnoutave = (isfinite(prm->dtoutave)) ? (int) (prm->dtoutave / prm->dt) : INT32_MAX;
+    dnobs = (isfinite(prm->dtobs)) ? prm->dtobs / prm->dt : INT32_MAX;
 
     if (verbose) {
         printf("    nstep = %d\n", nstep);
@@ -167,6 +169,12 @@ int main(int argc, char* argv[])
             calc_psi(qg, qg->psiguess, qg->q, qg->psi);
             model_writedump(qg, 0);
             nr++;
+        }
+
+        if (step % dnobs == 0) {
+            model_writeobs(qg);
+            printf(",");
+            fflush(stdout);
         }
 
         if (!isfinite(prm->dtoutave))

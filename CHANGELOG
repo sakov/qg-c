@@ -1,3 +1,12 @@
+v0.15
+    PS 19062024
+    -- Added generation of obs. The observation cell indices are uniformly
+       distributed in the interval [0, nx * ny - 1], with the position of the
+       first observation randomly chosen in this interval. In practice for
+       given settings the clustering of observations may differ from a few
+       tracks to an about uniform grid, depending on the specified number of
+       observations. The observation positions and errors are designed to
+       reproduce for repeated runs. For now, observations are for "psi" only.
 v0.14
     PS 16062024
     -- Introduced parameters "dtoutave" and "outfnameave" to output model

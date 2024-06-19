@@ -34,6 +34,7 @@
 #define DTOUT_DEF 20.0
 #define OUTFNAME_DEF "qg.nc"
 #define OUTFNAMEAVE_DEF "qgave.nc"
+#define OBSFNAME_DEF "qgobs.nc"
 
 typedef struct {
     char* prmfname;
@@ -57,6 +58,11 @@ typedef struct {
     char* outfname;
     char* outfnameave;
     int save_q;
+    
+    int nobs;
+    double estd;
+    double dtobs;
+    char* obsfname;
 
     int m, n;
 } qgprm;

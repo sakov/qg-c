@@ -22,6 +22,7 @@ int str2bool(char* token, int* value);
 void* alloc2d(size_t nj, size_t ni, size_t unitsize);
 void printtime(const char offset[]);
 int file_exists(char* fname);
+void get_obspos(int n, int mn, long int seed, int pos[], double estd, float error[]);
 
 #define _UTILS_H
 #endif

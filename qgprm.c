@@ -69,6 +69,10 @@ static qgprm* qgprm_create(void)
     prm->infname = NULL;
     prm->outfname = strdup(OUTFNAME_DEF);
     prm->outfnameave = strdup(OUTFNAMEAVE_DEF);
+    prm->nobs = 0;
+    prm->estd = 0.0;
+    prm->dtobs = NAN;
+    prm->obsfname = NULL;
     prm->save_q = SAVE_Q_DEF;
 
     return prm;
@@ -218,6 +222,27 @@ qgprm* qgprm_read(char* fname)
                 quit("%s, l.%d: SAVE_Q not specified", fname, line);
             if (!str2bool(token, &prm->save_q))
                 quit("%s, l.%d: could not convert \"%s\" to bool", fname, line, token);
+        } else if (strcasecmp(token, "NOBS") == 0) {
+            if ((token = strtok(NULL, seps)) == NULL)
+                quit("%s, l.%d: NOBS not specified", fname, line);
+            if (!str2int(token, &prm->nobs))
+                quit("%s, l.%d: could not convert \"%s\" entry to int", fname, line, token);
+        } else if (strcasecmp(token, "ESTD") == 0) {
+            if ((token = strtok(NULL, seps)) == NULL)
+                quit("%s, l.%d: ESTD not specified", fname, line);
+            if (!str2double(token, &prm->estd))
+                quit("%s, l.%d: could not convert \"%s\" entry to double", fname, line, token);
+        } else if (strcasecmp(token, "DTOBS") == 0) {
+            if ((token = strtok(NULL, seps)) == NULL)
+                quit("%s, l.%d: DTOBS not specified", fname, line);
+            if (!str2double(token, &prm->dtobs))
+                quit("%s, l.%d: could not convert \"%s\" entry to double", fname, line, token);
+        } else if (strcasecmp(token, "OBSFNAME") == 0) {
+            if ((token = strtok(NULL, seps)) == NULL)
+                quit("%s, l.%d: OBSFNAME not specified", fname, line);
+            if (prm->obsfname != NULL)
+                free(prm->obsfname);
+            prm->obsfname = strdup(token);
         } else
             quit("%s, l.%d: unexpected entry \"%s\"", fname, line, token);
     }
@@ -231,6 +256,12 @@ qgprm* qgprm_read(char* fname)
     if (isfinite(prm->dtoutave)
         && prm->dtoutave / prm->dt - floor(prm->dtoutave / prm->dt) != 0.0)
         quit("dtoutave has to be integer multiple of dt (dtoutave / dt = %f)", prm->dtoutave / prm->dt);
+    if (prm->dtobs / prm->dt - floor(prm->dtobs / prm->dt) != 0.0)
+        quit("dtobs has to be integer multiple of dt (dtobs / dt = %f)", prm->dtobs / prm->dt);
+    if (prm->nobs != 0 && prm->dtobs == 0)
+        quit("dtobs must be defined when nobs != 0");
+    if (prm->nobs != 0 && prm->obsfname == NULL)
+        prm->obsfname = strdup(OBSFNAME_DEF);
 
     return prm;
 }
@@ -239,10 +270,14 @@ qgprm* qgprm_read(char* fname)
  */
 void qgprm_destroy(qgprm* prm)
 {
-    free(prm->prmfname);
-    free(prm->infname);
-    free(prm->outfname);
-    free(prm->outfnameave);
+    if (prm->prmfname != NULL)
+        free(prm->prmfname);
+    if (prm->infname != NULL)
+        free(prm->infname);
+    if (prm->outfname != NULL)
+        free(prm->outfname);
+    if (prm->outfnameave != NULL)
+        free(prm->outfnameave);
     free(prm);
 }
 
@@ -283,6 +318,12 @@ void qgprm_print(qgprm* prm)
     printf("    r        = %.1e\n", prm->r);
     printf("    A        = %.2f\n", prm->a);
     printf("    k        = %.1f\n", prm->k);
+    if (prm->nobs != 0) {
+        printf("    nobs     = %d\n", prm->nobs);
+        printf("    estd     = %.3f\n", prm->estd);
+        printf("    dtobs    = %.2f\n", prm->dtobs);
+        printf("    obsfile  = %s\n", prm->obsfname);
+    }
 }
 
 /**
@@ -322,7 +363,11 @@ void qgprm_describe(void)
     printf("    A        = <value>                        (%.2f)\n", A_DEF);
     printf("    k        = <value>                        (%.1f)\n", K_DEF);
     printf("  # other parameters:\n");
-    printf("    verbose = {0 | 1 | 2}                     (%d)\n", VERBOSE_DEF);
+    printf("    verbose  = {0 | 1 | 2}                    (%d)\n", VERBOSE_DEF);
+    printf("    nobs     = <number>                       (0)\n");
+    printf("    estd     = <value>                        (0.0)\n");
+    printf("    dtobs    = <observation time interval>    (NaN)\n");
+    printf("    obsfname = <file name>                    (obs_psi.nc)\n");
     printf("\n");
     printf("  Notes:\n");
     printf("    1. (...) denotes a default value\n");

@@ -47,6 +47,7 @@ void model_destroy(model* m);
 void model_readinput(model* m);
 void model_createoutput(model* m);
 void model_writedump(model* m, int ave);
+void model_writeobs(model*qg);
 
 #define _MODEL_H
 #endif

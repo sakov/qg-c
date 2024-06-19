@@ -218,11 +218,33 @@ static void _model_createoutput(model* qg, int ave)
 
 /**
  */
+static void model_createobsoutput(model* qg)
+{
+    qgprm* prm = qg->prm;
+    char* fname = prm->obsfname;
+    int ncid, varid, dimids[2];
+
+    if (file_exists(fname) & !force)
+        quit("\"%s\" exists; use \"-f\" to overwrite", fname);
+    
+    ncw_create(fname, NC_CLOBBER | NETCDF_FORMAT, &ncid);
+    ncw_def_dim(ncid, "record", NC_UNLIMITED, &dimids[0]);
+    ncw_def_dim(ncid, "nobs", prm->nobs, &dimids[1]);
+    ncw_def_var(ncid, "t", NC_DOUBLE, 1, dimids, NULL);
+    ncw_def_var(ncid, "ij", NC_INT, 2, dimids, NULL);
+    ncw_def_var(ncid, "psi", NC_FLOAT, 2, dimids, &varid);
+    ncw_put_att_double(ncid, varid, "estd", 1, &prm->estd);
+    ncw_close(ncid);
+}
+
+/**
+ */
 void model_createoutput(model* qg)
 {
     _model_createoutput(qg, 0);
     if (isfinite(qg->prm->dtoutave))
         _model_createoutput(qg, 1);
+    model_createobsoutput(qg);
 }
 
 /**
@@ -250,4 +272,39 @@ void model_writedump(model* qg, int ave)
         printf((!ave) ? ":" : ".");
         fflush(stdout);
     }
+}
+
+/**
+ */
+void model_writeobs(model* qg)
+{
+    qgprm* prm = qg->prm;
+    int* pos = malloc(prm->nobs * sizeof(int));
+    float* obs = malloc(prm->nobs * sizeof(float));
+    float* error = NULL;
+    int ncid, varid;
+    int nr, i;
+
+    if (prm->estd > 0.0)
+        error = malloc(prm->nobs * sizeof(float));
+    get_obspos(prm->nobs, qg->mn, (int) qg->t, pos, prm->estd, error);
+    if (error == NULL)
+        for (i = 0; i < prm->nobs; ++i)
+            obs[i] = (float) qg->psi[0][pos[i]];
+    else
+        for (i = 0; i < prm->nobs; ++i)
+            obs[i] = (float) qg->psi[0][pos[i]] + error[i];
+    
+    ncw_open(prm->obsfname, NC_WRITE, &ncid);
+    nr = ncw_inq_nrecords(ncid);
+    ncw_inq_varid(ncid, "t", &varid);
+    ncw_put_var_double_record(ncid, varid, nr, &qg->t);
+    ncw_inq_varid(ncid, "ij", &varid);
+    ncw_put_var_int_record(ncid, varid, nr, pos);
+    ncw_inq_varid(ncid, "psi", &varid);
+    ncw_put_var_float_record(ncid, varid, nr, obs);
+    ncw_close(ncid);
+    
+    free(pos);
+    free(obs);
 }
