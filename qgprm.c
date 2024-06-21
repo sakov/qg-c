@@ -253,7 +253,7 @@ qgprm* qgprm_read(char* fname)
 
     if (!isfinite(prm->dtout) && !isfinite(prm->dtoutave) && !isfinite(prm->dtobs))
         quit("no output specified (need to set some of dtout, dtoutave, dtobs)");
-    if (prm->dtout / prm->dt - floor(prm->dtout / prm->dt) != 0.0)
+    if (isfinite(prm->dtout) && prm->dtout / prm->dt - floor(prm->dtout / prm->dt) != 0.0)
         quit("dtout has to be integer multiple of dt (dtout / dt = %f)", prm->dtout / prm->dt);
     if (isfinite(prm->dtoutave) && prm->dtoutave / prm->dt - floor(prm->dtoutave / prm->dt) != 0.0)
         quit("dtoutave has to be integer multiple of dt (dtoutave / dt = %f)", prm->dtoutave / prm->dt);

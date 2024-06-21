@@ -1,3 +1,11 @@
+v0.17
+    PS 21062024
+    -- Fixed a few defects manifested after setting dtout to NaN.
+v0.16
+    PS 21062024
+    -- Fixed some defects manifested whith undefined dtobs.
+    -- Made it possible to set dtout to NaN provided that either of dtoutave or
+       dtobs is defined.
 v0.15
     PS 19062024
     -- Added generation of obs. The observation cell indices are uniformly

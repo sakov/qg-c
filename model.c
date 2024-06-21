@@ -30,7 +30,7 @@
  */
 model* model_create(qgprm* prm)
 {
-    model* qg = malloc(sizeof(model));
+    model* qg = calloc(sizeof(model), 1);
     int m = prm->m;
     int n = prm->n;
     int scheme = prm->scheme;
@@ -59,9 +59,6 @@ model* model_create(qgprm* prm)
         qg->psiave = calloc(qg->mn, sizeof(double));
         if (prm->save_q)
             qg->qave = calloc(qg->mn, sizeof(double));
-    } else {
-        qg->psiave = NULL;
-        qg->qave = NULL;
     }
 
     qg->curlt = malloc(n * sizeof(double));
@@ -241,7 +238,8 @@ static void model_createobsoutput(model* qg)
  */
 void model_createoutput(model* qg)
 {
-    _model_createoutput(qg, 0);
+    if (isfinite(qg->prm->dtout))
+        _model_createoutput(qg, 0);
     if (isfinite(qg->prm->dtoutave))
         _model_createoutput(qg, 1);
     if (isfinite(qg->prm->dtobs))
