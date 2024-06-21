@@ -58,7 +58,7 @@ typedef struct {
     char* outfname;
     char* outfnameave;
     int save_q;
-    
+
     int nobs;
     double estd;
     double dtobs;

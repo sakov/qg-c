@@ -136,9 +136,9 @@ int main(int argc, char* argv[])
     }
 
     nstep = (prm->tend - qg->t) / prm->dt;
-    dnout = (int) (prm->dtout / prm->dt);
-    dnoutave = (isfinite(prm->dtoutave)) ? (int) (prm->dtoutave / prm->dt) : INT32_MAX;
-    dnobs = (isfinite(prm->dtobs)) ? prm->dtobs / prm->dt : INT32_MAX;
+    dnout = (int) (isfinite(prm->dtout) ? prm->dtout / prm->dt : 0);
+    dnoutave = (isfinite(prm->dtoutave)) ? (int) (prm->dtoutave / prm->dt) : 0;
+    dnobs = (isfinite(prm->dtobs)) ? prm->dtobs / prm->dt : 0;
 
     if (verbose) {
         printf("    nstep = %d\n", nstep);
@@ -165,19 +165,19 @@ int main(int argc, char* argv[])
         else if (prm->scheme == SCHEME_DP5)
             qg_step_dp5(qg);
 
-        if (step > 0 && step % dnout == 0) {
+        if (step > 0 && dnout > 0 && step % dnout == 0) {
             calc_psi(qg, qg->psiguess, qg->q, qg->psi);
             model_writedump(qg, 0);
             nr++;
         }
 
-        if (step % dnobs == 0) {
+        if (dnobs > 0 && step % dnobs == 0) {
             model_writeobs(qg);
             printf(",");
             fflush(stdout);
         }
 
-        if (!isfinite(prm->dtoutave))
+        if (dnoutave <= 0)
             continue;
 
         weight = (step % dnoutave == 0) ? 0.5 : 1.0;

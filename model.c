@@ -226,7 +226,7 @@ static void model_createobsoutput(model* qg)
 
     if (file_exists(fname) & !force)
         quit("\"%s\" exists; use \"-f\" to overwrite", fname);
-    
+
     ncw_create(fname, NC_CLOBBER | NETCDF_FORMAT, &ncid);
     ncw_def_dim(ncid, "record", NC_UNLIMITED, &dimids[0]);
     ncw_def_dim(ncid, "nobs", prm->nobs, &dimids[1]);
@@ -244,7 +244,8 @@ void model_createoutput(model* qg)
     _model_createoutput(qg, 0);
     if (isfinite(qg->prm->dtoutave))
         _model_createoutput(qg, 1);
-    model_createobsoutput(qg);
+    if (isfinite(qg->prm->dtobs))
+        model_createobsoutput(qg);
 }
 
 /**
@@ -294,7 +295,7 @@ void model_writeobs(model* qg)
     else
         for (i = 0; i < prm->nobs; ++i)
             obs[i] = (float) qg->psi[0][pos[i]] + error[i];
-    
+
     ncw_open(prm->obsfname, NC_WRITE, &ncid);
     nr = ncw_inq_nrecords(ncid);
     ncw_inq_varid(ncid, "t", &varid);
@@ -304,7 +305,7 @@ void model_writeobs(model* qg)
     ncw_inq_varid(ncid, "psi", &varid);
     ncw_put_var_float_record(ncid, varid, nr, obs);
     ncw_close(ncid);
-    
+
     free(pos);
     free(obs);
 }

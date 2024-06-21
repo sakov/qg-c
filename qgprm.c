@@ -251,12 +251,13 @@ qgprm* qgprm_read(char* fname)
     prm->n = prm->nx1 * ipow(2, prm->mrefin - 1) + 1;
     prm->m = prm->ny1 * ipow(2, prm->mrefin - 1) + 1;
 
+    if (!isfinite(prm->dtout) && !isfinite(prm->dtoutave) && !isfinite(prm->dtobs))
+        quit("no output specified (need to set some of dtout, dtoutave, dtobs)");
     if (prm->dtout / prm->dt - floor(prm->dtout / prm->dt) != 0.0)
         quit("dtout has to be integer multiple of dt (dtout / dt = %f)", prm->dtout / prm->dt);
-    if (isfinite(prm->dtoutave)
-        && prm->dtoutave / prm->dt - floor(prm->dtoutave / prm->dt) != 0.0)
+    if (isfinite(prm->dtoutave) && prm->dtoutave / prm->dt - floor(prm->dtoutave / prm->dt) != 0.0)
         quit("dtoutave has to be integer multiple of dt (dtoutave / dt = %f)", prm->dtoutave / prm->dt);
-    if (prm->dtobs / prm->dt - floor(prm->dtobs / prm->dt) != 0.0)
+    if (isfinite(prm->dtobs) && prm->dtobs / prm->dt - floor(prm->dtobs / prm->dt) != 0.0)
         quit("dtobs has to be integer multiple of dt (dtobs / dt = %f)", prm->dtobs / prm->dt);
     if (prm->nobs != 0 && prm->dtobs == 0)
         quit("dtobs must be defined when nobs != 0");

@@ -22,7 +22,7 @@
 #include <errno.h>
 #include <string.h>
 #include <time.h>
-#include <stdint.h> 
+#include <stdint.h>
 #include "qg.h"
 #include "utils.h"
 
@@ -39,7 +39,9 @@ void quit(char* format, ...)
     vfprintf(stderr, format, args);
     va_end(args);
     fprintf(stderr, "\n\n");
+#if 0
     abort();                    /* raise SIGABRT for debugging */
+#endif
     exit(1);
 }
 
